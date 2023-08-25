@@ -1,7 +1,7 @@
 package com.example.plugins
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -15,7 +15,26 @@ data class FizzBuzz(
     val str1: String,
     val str2: String,
     val counter: Int = 0
-)
+
+
+){
+    fun getFizzBuzzResult(): List<String> {
+        val output = mutableListOf<String>()
+        for (i in 0..limit) {
+            if (i % (int1 * int2) == 0) {
+                output.add("${str1}${str2}")
+            } else if (i % int1 == 0) {
+                output.add(str1)
+            } else if (i % int2 == 0) {
+                output.add(str2)
+            } else {
+                output.add(i.toString())
+            }
+        }
+        return output
+    }
+}
+
 
 class FizzBuzzService(private val connection: Connection) {
     companion object {
@@ -46,7 +65,7 @@ class FizzBuzzService(private val connection: Connection) {
             val id = resultSet.getInt("id")
             getUpdateStatement(counter, id).executeUpdate()
 
-            return@withContext getFizzBuzzReturn(fizzBuzz)
+            return@withContext fizzBuzz.getFizzBuzzResult()
         } else {
             //We insert as the same fizzbuzz has not been seen yet
             val insertStatement = getInsertStatement(fizzBuzz)
@@ -54,7 +73,7 @@ class FizzBuzzService(private val connection: Connection) {
 
             val generatedKeys = insertStatement.generatedKeys
             if (generatedKeys.next()) {
-                return@withContext getFizzBuzzReturn(fizzBuzz)
+                return@withContext fizzBuzz.getFizzBuzzResult()
             } else {
                 throw Exception("Unable to retrieve the id of the newly inserted fizzbuzz")
             }
@@ -80,7 +99,7 @@ class FizzBuzzService(private val connection: Connection) {
         }
     }
 
-    private fun getSelectStatement( fizzBuzz: FizzBuzz): PreparedStatement{
+    private fun getSelectStatement(fizzBuzz: FizzBuzz): PreparedStatement {
         val selectStatement = connection.prepareStatement(SELECT_FIIZBUZZ)
         selectStatement.setInt(1, fizzBuzz.int1)
         selectStatement.setInt(2, fizzBuzz.int2)
@@ -90,14 +109,14 @@ class FizzBuzzService(private val connection: Connection) {
         return selectStatement
     }
 
-    private fun getUpdateStatement(counter: Int, id: Int): PreparedStatement{
+    private fun getUpdateStatement(counter: Int, id: Int): PreparedStatement {
         val updateStatement = connection.prepareStatement(UPDATE_FIIZBUZZ)
         updateStatement.setInt(1, counter + 1)
         updateStatement.setInt(2, id)
         return updateStatement
     }
 
-    private fun getInsertStatement(fizzBuzz: FizzBuzz):PreparedStatement{
+    private fun getInsertStatement(fizzBuzz: FizzBuzz): PreparedStatement {
         val insertStatement = connection.prepareStatement(INSERT_FIZZBUZZ, Statement.RETURN_GENERATED_KEYS)
         insertStatement.setInt(1, fizzBuzz.int1)
         insertStatement.setInt(2, fizzBuzz.int2)
@@ -106,24 +125,6 @@ class FizzBuzzService(private val connection: Connection) {
         insertStatement.setString(5, fizzBuzz.str2)
         insertStatement.setInt(6, 1)
         return insertStatement
-    }
-
-
-
-    private fun getFizzBuzzReturn(fizzBuzz: FizzBuzz): List<String> {
-        val output = mutableListOf<String>()
-        for (i in 0..fizzBuzz.limit) {
-            if (i % (fizzBuzz.int1 * fizzBuzz.int2) == 0) {
-                output.add("${fizzBuzz.str1}${fizzBuzz.str2}")
-            } else if (i % fizzBuzz.int1 == 0) {
-                output.add(fizzBuzz.str1)
-            } else if (i % fizzBuzz.int2 == 0) {
-                output.add(fizzBuzz.str2)
-            } else {
-                output.add(i.toString())
-            }
-        }
-        return output
     }
 
 }
